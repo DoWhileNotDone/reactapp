@@ -1,14 +1,3 @@
-# Fix permissions after you run commands on both hosts and guest machine
-if !Vagrant::Util::Platform.windows?
-  system("
-      if [ #{ARGV[0]} = 'up' ]; then
-          echo 'Setting group write permissions for ./var/logs/*'
-          chmod 775 ./var/logs
-          chmod 664 ./var/logs/*
-      fi
-  ")
-end
-
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
@@ -18,7 +7,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.box = "bento/ubuntu-18.04"
-  config.vm.network "private_network", ip: "192.168.50.60"
+  config.vm.network "private_network", ip: "192.168.50.66"
+
+  #config.vm.synced_folder ".", "/vagrant", type: "rsync", rsync_auto: true, rsync_exclude: [".git/", "node_modules/"]
 
   # Update apt packages
   config.vm.provision "shell", name: "apt", inline: <<-SHELL
@@ -39,22 +30,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       ant
     )
     apt-get install -y ${packagelist[@]}
-  SHELL
-
-  # Update apt source for postgresql
-  config.vm.provision "shell", name: "add postgres repo", inline: <<-SHELL
-    PG_REPO_APT_SOURCE=/etc/apt/sources.list.d/pgdg.list
-    if [ ! -f "$PG_REPO_APT_SOURCE" ]
-    then
-      # Add PG apt repo:
-      echo "deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main" > "$PG_REPO_APT_SOURCE"
-
-      # Add PGDG repo key:
-      wget --quiet -O - https://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | apt-key add -
-
-      apt-get update
-    fi
-
   SHELL
 
   #Install node/nvm/gulp
@@ -92,63 +67,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     ufw allow 'Apache'
   SHELL
 
-  # Make sure logs folder is owned by apache with group vagrant
-  config.vm.synced_folder "var/logs", "/vagrant/var/logs", owner: "www-data", group: "vagrant"
-
-  config.vm.provision "shell", name: "install php", inline: <<-SHELL
-
-    # PHP and modules
-    # Not all these packages may be required, it is just a list of the most common
-    phppackagelist=(
-      php-pear
-      php-dev
-      php-zip
-      php-curl
-      php-xml
-      php-xmlrpc
-      php-xmlwriter
-      php-mbstring
-      php-pgsql
-      php-pdo
-      php-gd
-      php-intl
-      php-xsl
-      libapache2-mod-php
-   )
-
-   apt-get install -y php
-   apt-get install -y ${phppackagelist[@]}
-  SHELL
-
-  # Install Composer (Globally)
-  config.vm.provision "shell", name: "install composer", privileged: false, inline: <<-SHELL
-     cd /vagrant && curl -sS https://getcomposer.org/installer | php
-     sudo mv composer.phar /usr/local/bin/composer
-  SHELL
-
-  config.vm.provision "shell", name: "install postgres", inline: <<-SHELL
-
-    # Postgres 11 and modules
-    # Not all these packages may be required, it is just a list of the most common
-    pgpackagelist=(
-      postgresql
-      libpq5
-      postgresql-11
-      postgresql-client-11
-      postgresql-client-common
-      postgresql-contrib
-    )
-
-    apt-get install -y   ${pgpackagelist[@]}
-
-  SHELL
-
-  config.vm.provision "shell", name: "configure postgres", inline: <<-SHELL
-    sudo -u postgres psql -c "CREATE USER vagrant WITH SUPERUSER CREATEDB ENCRYPTED PASSWORD 'vagrant'"
-    sudo -u postgres createdb vagrant
-    # Make sure Postgres also runs after vagrant reload
-    systemctl enable postgresql
-  SHELL
   # Update Apache config and restart
   config.vm.provision "shell", name: "configure apache", inline: <<-'SHELL'
 
@@ -168,9 +86,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
    You are now up and running.
 
-   This is the >> Front End Development Server
+   This is the >> React App Development Server
 
-   The URL is 192.168.50.60
+   The URL is 192.168.50.66
 
 MESSAGE
 
