@@ -33,27 +33,27 @@ class Form extends React.Component {
   handleButtonClick() {
     this.setState({
       submitted: true,
+      messageText: 'I am Submit',
     });
   }
 
   render() {
     let display;
-    if (this.state.submitted === false) {
+    if (this.state.submitted === true) {
+      display = (
+         <Message
+          text={this.state.messageText}
+         />
+      );
+    } else {
       display = (
         <Button
           color='blue'
-          buttonText="eh"
+          buttonText="Submit Me!"
           onClick={() => this.handleButtonClick()}
-          display={!this.state.submitted}
          />
        );
-    } else {
-      display = (
-         <Message
-          text='Banana'
-          display={this.state.submitted}
-         />
-      );
+
     }
 
     return display;
